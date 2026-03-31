@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Color Blind</title>
+    
+    <link rel="icon" href="image_53.png">
+    <link rel="apple-touch-icon" href="image_53.png">
+
+    <style>
+        :root {
+            --main: #333;
+            --bg: #fff;
+            --accent: #eee;
+            --input-bg: #fafafa;
+            --radius: 15px;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg);
+            color: var(--main);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+            transition: background-color 0.3s ease;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 420px;
+            padding: 40px 20px;
+            box-sizing: border-box;
+            text-align: center;
+        }
+
+        h1 { font-size: 1.8rem; font-weight: 800; margin-bottom: 8px; letter-spacing: -1px; }
+        .subtitle { font-size: 0.85rem; color: #666; font-weight: 500; margin-bottom: 30px; }
+
+        /* Color Preview Area */
+        .preview-wall {
+            width: 100%;
+            height: 180px;
+            background-color: #eee;
+            border-radius: var(--radius);
+            margin-bottom: 25px;
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.05);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            border: 2px solid var(--accent);
+            position: relative;
+        }
+
+        .preview-text {
+            font-weight: 800;
+            font-size: 1.2rem;
+            z-index: 2;
+        }
+
+        .input-container {
+            position: relative;
+            margin-bottom: 15px;
+        }
+
+        .color-input {
+            width: 100%;
+            padding: 18px;
+            padding-right: 65px;
+            border: 2px solid var(--accent);
+            border-radius: var(--radius);
+            background: var(--input-bg);
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--main) !important;
+            box-sizing: border-box;
+            outline: none;
+            -webkit-appearance: none;
+            -webkit-text-fill-color: var(--main) !important;
+            opacity: 1 !important;
+            text-transform: uppercase;
+        }
+        .color-input::placeholder { color: #bbb; -webkit-text-fill-color: #bbb; text-transform: none; }
+
+        .clear-btn {
+            position: absolute;
+            right: 15px;
+            bottom: 11px;
+            background: none;
+            border: none;
+            color: #999;
+            font-size: 0.9rem;
+            font-weight: 800;
+            cursor: pointer;
+            padding: 5px 8px;
+            display: none;
+        }
+        .clear-btn.active { display: block; }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 25px;
+        }
+
+        .info-card {
+            background: #fff;
+            border: 1px solid #f0f0f0;
+            border-radius: var(--radius);
+            padding: 15px;
+            text-align: left;
+        }
+        .info-label { font-size: 0.7rem; color: #999; font-weight: 800; margin-bottom: 5px; display: block; }
+        .info-value { font-size: 0.9rem; font-weight: 700; color: var(--main); word-break: break-all; }
+
+        footer { margin-top: 50px; font-size: 11px; color: #aaa; line-height: 1.8; }
+        .footer-btns { margin-top: 30px; }
+        .kofi-btn {
+            display: inline-block; background: var(--main); color: #fff;
+            padding: 12px 25px; border-radius: var(--radius);
+            text-decoration: none; font-weight: bold; font-size: 14px; margin-bottom: 12px;
+        }
+        .home-btn {
+            display: block; width: 60%; margin: 0 auto; background: var(--accent);
+            color: var(--main); border: none; padding: 10px;
+            border-radius: var(--radius); font-weight: 700; font-size: 13px; cursor: pointer;
+        }
+
+        #modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 100;
+        }
+        .modal-content {
+            background: #fff; width: 85%; max-width: 320px; padding: 30px;
+            border-radius: var(--radius); text-align: left; position: relative;
+        }
+        .close-x { position: absolute; top: 15px; right: 20px; font-size: 20px; color: #ccc; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Color Blind</h1>
+    <p class="subtitle">Instant HEX / RGB Previewer.</p>
+
+    <div class="preview-wall" id="previewWall">
+        <span class="preview-text" id="previewText">Preview</span>
+    </div>
+
+    <div class="input-container">
+        <input type="text" class="color-input" id="colorInput" placeholder="Paste HEX or RGB" oninput="updateColor()" spellcheck="false">
+        <button class="clear-btn" id="clearBtn" onclick="clearInput()">clr</button>
+    </div>
+
+    <div class="info-grid">
+        <div class="info-card">
+            <span class="info-label">CONTRAST</span>
+            <span class="info-value" id="contrastInfo">--</span>
+        </div>
+        <div class="info-card">
+            <span class="info-label">INVERTED</span>
+            <span class="info-value" id="invertedInfo">--</span>
+        </div>
+    </div>
+
+    <div class="footer-btns">
+        <a href="https://ko-fi.com/afrorakda" target="_blank" class="kofi-btn">☕️buy me a coffee</a>
+        <button class="home-btn" onclick="showModal()">Add to Home Screen</button>
+    </div>
+
+    <footer>
+        <div>No login / No tracking / No ads / Browser only</div>
+        <div>Privacy Policy / afrorakda © 2026</div>
+    </footer>
+</div>
+
+<div id="modal" onclick="hideModal()">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <span class="close-x" onclick="hideModal()">×</span>
+        <h3>📱 Install</h3>
+        <p>Add to your home screen.</p>
+        <p>🍏 <strong>iPhone (Safari):</strong><br>Tap Share, then Add to Home Screen.</p>
+        <p>🤖 <strong>Android (Chrome):</strong><br>Tap Menu (⋮), then Add to Home Screen.</p>
+    </div>
+</div>
+
+<script>
+    const colorInput = document.getElementById('colorInput');
+    const previewWall = document.getElementById('previewWall');
+    const previewText = document.getElementById('previewText');
+    const clearBtn = document.getElementById('clearBtn');
+    const contrastInfo = document.getElementById('contrastInfo');
+    const invertedInfo = document.getElementById('invertedInfo');
+
+    function updateColor() {
+        let val = colorInput.value.trim();
+        
+        if (val.length > 0) {
+            clearBtn.classList.add('active');
+        } else {
+            clearBtn.classList.remove('active');
+            resetPreview();
+            return;
+        }
+
+        // プレビューの更新
+        previewWall.style.backgroundColor = val;
+        
+        // 有効な色かどうかチェックして情報を更新
+        const tempElement = document.createElement('div');
+        tempElement.style.color = val;
+        if (tempElement.style.color !== "") {
+            // 背景からRGB値を取得してコントラスト判定
+            const rgb = getComputedStyle(tempElement).color;
+            const rgbValues = rgb.match(/\d+/g).map(Number);
+            
+            // 明度計算 (W3C式)
+            const brightness = (rgbValues[0] * 299 + rgbValues[1] * 587 + rgbValues[2] * 114) / 1000;
+            const isDark = brightness < 128;
+            
+            previewText.style.color = isDark ? "#ffffff" : "#333333";
+            previewText.textContent = val.toUpperCase();
+            contrastInfo.textContent = isDark ? "Light Text OK" : "Dark Text OK";
+            
+            // 反転色の計算
+            const inverted = `rgb(${255-rgbValues[0]}, ${255-rgbValues[1]}, ${255-rgbValues[2]})`;
+            invertedInfo.textContent = inverted;
+        } else {
+            previewText.textContent = "Invalid Color";
+            contrastInfo.textContent = "--";
+            invertedInfo.textContent = "--";
+        }
+    }
+
+    function resetPreview() {
+        previewWall.style.backgroundColor = "#eee";
+        previewText.style.color = "#333";
+        previewText.textContent = "Preview";
+        contrastInfo.textContent = "--";
+        invertedInfo.textContent = "--";
+    }
+
+    function clearInput() {
+        colorInput.value = '';
+        clearBtn.classList.remove('active');
+        colorInput.focus();
+        resetPreview();
+    }
+
+    function showModal() { document.getElementById('modal').style.display = 'flex'; }
+    function hideModal() { document.getElementById('modal').style.display = 'none'; }
+</script>
+
+</body>
+</html>
