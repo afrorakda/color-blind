@@ -39,7 +39,6 @@
         h1 { font-size: 1.8rem; font-weight: 800; margin-bottom: 8px; letter-spacing: -1px; }
         .subtitle { font-size: 0.85rem; color: #666; font-weight: 500; margin-bottom: 30px; }
 
-        /* プレビューエリアを拡大 */
         .preview-wall {
             width: 100%;
             height: 260px;
@@ -47,10 +46,8 @@
             border-radius: var(--radius);
             margin-bottom: 25px;
             display: flex;
-            flex-direction: column;
             align-items: center;
             justify-content: center;
-            overflow: hidden;
             border: 2px solid var(--accent);
             transition: background-color 0.2s ease;
         }
@@ -82,7 +79,6 @@
             -webkit-text-fill-color: var(--main) !important;
             opacity: 1 !important;
         }
-        .color-input::placeholder { color: #bbb; -webkit-text-fill-color: #bbb; }
 
         .clear-btn {
             position: absolute;
@@ -112,10 +108,33 @@
             border-radius: var(--radius);
             padding: 15px;
             text-align: left;
-            min-height: 60px;
+            min-height: 70px;
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
         }
-        .info-label { font-size: 0.7rem; color: #999; font-weight: 800; margin-bottom: 5px; display: block; }
-        .info-value { font-size: 0.85rem; font-weight: 700; color: var(--main); }
+        .info-card:active { transform: scale(0.96); }
+
+        .info-label { font-size: 0.65rem; color: #999; font-weight: 800; margin-bottom: 4px; display: block; z-index: 2; position: relative; }
+        .info-value { font-size: 0.85rem; font-weight: 700; z-index: 2; position: relative; }
+
+        /* コピー完了フィードバック */
+        .copy-toast {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 800;
+            opacity: 0;
+            transition: opacity 0.2s;
+            pointer-events: none;
+            z-index: 10;
+        }
 
         footer { margin-top: 50px; font-size: 11px; color: #aaa; line-height: 1.8; }
         .footer-btns { margin-top: 30px; }
@@ -157,13 +176,14 @@
     </div>
 
     <div class="info-grid">
-        <div class="info-card">
-            <span class="info-label">CONTRAST</span>
-            <span class="info-value" id="contrastInfo">--</span>
+        <div class="info-card" id="contrastCard">
+            <span class="info-label" id="contrastLabel">CONTRAST</span>
+            <span class="info-value" id="contrastValue">--</span>
         </div>
-        <div class="info-card">
-            <span class="info-label">INVERTED</span>
-            <span class="info-value" id="invertedInfo">--</span>
+        <div class="info-card" id="invertedCard" onclick="copyInverted()">
+            <span class="info-label" id="invertedLabel">INVERTED (TAP)</span>
+            <span class="info-value" id="invertedValue">--</span>
+            <div class="copy-toast" id="copyToast">COPIED!</div>
         </div>
     </div>
 
@@ -193,12 +213,18 @@
     const previewWall = document.getElementById('previewWall');
     const previewHex = document.getElementById('previewHex');
     const clearBtn = document.getElementById('clearBtn');
-    const contrastInfo = document.getElementById('contrastInfo');
-    const invertedInfo = document.getElementById('invertedInfo');
+    
+    const contrastCard = document.getElementById('contrastCard');
+    const contrastValue = document.getElementById('contrastValue');
+    const contrastLabel = document.getElementById('contrastLabel');
+
+    const invertedCard = document.getElementById('invertedCard');
+    const invertedValue = document.getElementById('invertedValue');
+    const invertedLabel = document.getElementById('invertedLabel');
+    const copyToast = document.getElementById('copyToast');
 
     function handleInput() {
         let val = colorInput.value.trim();
-        
         if (val.length > 0) {
             clearBtn.classList.add('active');
             updateColor(val);
@@ -208,8 +234,16 @@
         }
     }
 
+    function rgbToHex(r, g, b) {
+        return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase();
+    }
+
+    function getBrightness(r, g, b) {
+        return (r * 299 + g * 587 + b * 114) / 1000;
+    }
+
     function updateColor(input) {
-        // #なしHEXの自動補完 (3桁または6桁の数字/英字のみの場合)
+        // #補完
         if (/^[0-9A-F]{3}$/i.test(input) || /^[0-9A-F]{6}$/i.test(input)) {
             input = '#' + input;
         }
@@ -218,9 +252,6 @@
         s.color = input;
         
         if (s.color !== "") {
-            previewWall.style.backgroundColor = input;
-            
-            // 実際に適用された色（RGB形式）を取得して解析
             const tempDiv = document.createElement('div');
             tempDiv.style.color = input;
             document.body.appendChild(tempDiv);
@@ -229,30 +260,65 @@
             
             const rgb = computedColor.match(/\d+/g).map(Number);
             const r = rgb[0], g = rgb[1], b = rgb[2];
-            
-            // 明度計算 (W3C)
-            const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+            const brightness = getBrightness(r, g, b);
             const isDark = brightness < 128;
-            
+
+            // Main Preview
+            previewWall.style.backgroundColor = input;
             previewHex.textContent = input.toUpperCase();
             previewHex.style.color = isDark ? "#ffffff" : "#333333";
-            
-            contrastInfo.textContent = isDark ? "Light Text OK" : "Dark Text OK";
-            invertedInfo.textContent = `RGB(${255-r}, ${255-g}, ${255-b})`;
+
+            // Contrast Card (推奨テキスト色の背景にする)
+            const textBg = isDark ? "#ffffff" : "#333333";
+            const textCol = isDark ? "#333333" : "#ffffff";
+            contrastCard.style.backgroundColor = textBg;
+            contrastValue.style.color = textCol;
+            contrastLabel.style.color = textCol;
+            contrastValue.textContent = isDark ? "Use Light Text" : "Use Dark Text";
+
+            // Inverted Card
+            const invR = 255 - r, invG = 255 - g, invB = 255 - b;
+            const invHex = rgbToHex(invR, invG, invB);
+            const invBrightness = getBrightness(invR, invG, invB);
+            const invTextCol = invBrightness < 128 ? "#ffffff" : "#333333";
+
+            invertedCard.style.backgroundColor = invHex;
+            invertedValue.textContent = invHex;
+            invertedValue.style.color = invTextCol;
+            invertedLabel.style.color = invTextCol;
         } else {
             previewHex.textContent = "Invalid Color";
-            previewHex.style.color = "#333";
-            contrastInfo.textContent = "--";
-            invertedInfo.textContent = "--";
+            resetInfo();
         }
+    }
+
+    function copyInverted() {
+        const val = invertedValue.textContent;
+        if (val === "--" || val === "Invalid Color") return;
+        
+        navigator.clipboard.writeText(val).then(() => {
+            copyToast.style.opacity = "1";
+            setTimeout(() => { copyToast.style.opacity = "0"; }, 1000);
+        });
     }
 
     function resetPreview() {
         previewWall.style.backgroundColor = "#eee";
         previewHex.textContent = "Preview";
         previewHex.style.color = "#333";
-        contrastInfo.textContent = "--";
-        invertedInfo.textContent = "--";
+        resetInfo();
+    }
+
+    function resetInfo() {
+        contrastCard.style.backgroundColor = "#fff";
+        contrastValue.textContent = "--";
+        contrastValue.style.color = "#333";
+        contrastLabel.style.color = "#999";
+
+        invertedCard.style.backgroundColor = "#fff";
+        invertedValue.textContent = "--";
+        invertedValue.style.color = "#333";
+        invertedLabel.style.color = "#999";
     }
 
     function clearInput() {
