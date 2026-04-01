@@ -26,7 +26,6 @@
             justify-content: center;
             min-height: 100vh;
             -webkit-font-smoothing: antialiased;
-            transition: background-color 0.3s ease;
         }
 
         .container {
@@ -40,26 +39,26 @@
         h1 { font-size: 1.8rem; font-weight: 800; margin-bottom: 8px; letter-spacing: -1px; }
         .subtitle { font-size: 0.85rem; color: #666; font-weight: 500; margin-bottom: 30px; }
 
-        /* Color Preview Area */
+        /* プレビューエリアを拡大 */
         .preview-wall {
             width: 100%;
-            height: 180px;
+            height: 260px;
             background-color: #eee;
             border-radius: var(--radius);
             margin-bottom: 25px;
-            box-shadow: inset 0 2px 10px rgba(0,0,0,0.05);
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
             overflow: hidden;
             border: 2px solid var(--accent);
-            position: relative;
+            transition: background-color 0.2s ease;
         }
 
-        .preview-text {
-            font-weight: 800;
-            font-size: 1.2rem;
-            z-index: 2;
+        .preview-hex {
+            font-weight: 900;
+            font-size: 1.5rem;
+            letter-spacing: 1px;
         }
 
         .input-container {
@@ -82,9 +81,8 @@
             -webkit-appearance: none;
             -webkit-text-fill-color: var(--main) !important;
             opacity: 1 !important;
-            text-transform: uppercase;
         }
-        .color-input::placeholder { color: #bbb; -webkit-text-fill-color: #bbb; text-transform: none; }
+        .color-input::placeholder { color: #bbb; -webkit-text-fill-color: #bbb; }
 
         .clear-btn {
             position: absolute;
@@ -114,9 +112,10 @@
             border-radius: var(--radius);
             padding: 15px;
             text-align: left;
+            min-height: 60px;
         }
         .info-label { font-size: 0.7rem; color: #999; font-weight: 800; margin-bottom: 5px; display: block; }
-        .info-value { font-size: 0.9rem; font-weight: 700; color: var(--main); word-break: break-all; }
+        .info-value { font-size: 0.85rem; font-weight: 700; color: var(--main); }
 
         footer { margin-top: 50px; font-size: 11px; color: #aaa; line-height: 1.8; }
         .footer-btns { margin-top: 30px; }
@@ -149,11 +148,11 @@
     <p class="subtitle">Instant HEX / RGB Previewer.</p>
 
     <div class="preview-wall" id="previewWall">
-        <span class="preview-text" id="previewText">Preview</span>
+        <span class="preview-hex" id="previewHex">Preview</span>
     </div>
 
     <div class="input-container">
-        <input type="text" class="color-input" id="colorInput" placeholder="Paste HEX or RGB" oninput="updateColor()" spellcheck="false">
+        <input type="text" class="color-input" id="colorInput" placeholder="HEX, RGB, or Name" oninput="handleInput()" spellcheck="false">
         <button class="clear-btn" id="clearBtn" onclick="clearInput()">clr</button>
     </div>
 
@@ -192,46 +191,57 @@
 <script>
     const colorInput = document.getElementById('colorInput');
     const previewWall = document.getElementById('previewWall');
-    const previewText = document.getElementById('previewText');
+    const previewHex = document.getElementById('previewHex');
     const clearBtn = document.getElementById('clearBtn');
     const contrastInfo = document.getElementById('contrastInfo');
     const invertedInfo = document.getElementById('invertedInfo');
 
-    function updateColor() {
+    function handleInput() {
         let val = colorInput.value.trim();
         
         if (val.length > 0) {
             clearBtn.classList.add('active');
+            updateColor(val);
         } else {
             clearBtn.classList.remove('active');
             resetPreview();
-            return;
+        }
+    }
+
+    function updateColor(input) {
+        // #なしHEXの自動補完 (3桁または6桁の数字/英字のみの場合)
+        if (/^[0-9A-F]{3}$/i.test(input) || /^[0-9A-F]{6}$/i.test(input)) {
+            input = '#' + input;
         }
 
-        // プレビューの更新
-        previewWall.style.backgroundColor = val;
+        const s = new Option().style;
+        s.color = input;
         
-        // 有効な色かどうかチェックして情報を更新
-        const tempElement = document.createElement('div');
-        tempElement.style.color = val;
-        if (tempElement.style.color !== "") {
-            // 背景からRGB値を取得してコントラスト判定
-            const rgb = getComputedStyle(tempElement).color;
-            const rgbValues = rgb.match(/\d+/g).map(Number);
+        if (s.color !== "") {
+            previewWall.style.backgroundColor = input;
             
-            // 明度計算 (W3C式)
-            const brightness = (rgbValues[0] * 299 + rgbValues[1] * 587 + rgbValues[2] * 114) / 1000;
+            // 実際に適用された色（RGB形式）を取得して解析
+            const tempDiv = document.createElement('div');
+            tempDiv.style.color = input;
+            document.body.appendChild(tempDiv);
+            const computedColor = getComputedStyle(tempDiv).color;
+            document.body.removeChild(tempDiv);
+            
+            const rgb = computedColor.match(/\d+/g).map(Number);
+            const r = rgb[0], g = rgb[1], b = rgb[2];
+            
+            // 明度計算 (W3C)
+            const brightness = (r * 299 + g * 587 + b * 114) / 1000;
             const isDark = brightness < 128;
             
-            previewText.style.color = isDark ? "#ffffff" : "#333333";
-            previewText.textContent = val.toUpperCase();
-            contrastInfo.textContent = isDark ? "Light Text OK" : "Dark Text OK";
+            previewHex.textContent = input.toUpperCase();
+            previewHex.style.color = isDark ? "#ffffff" : "#333333";
             
-            // 反転色の計算
-            const inverted = `rgb(${255-rgbValues[0]}, ${255-rgbValues[1]}, ${255-rgbValues[2]})`;
-            invertedInfo.textContent = inverted;
+            contrastInfo.textContent = isDark ? "Light Text OK" : "Dark Text OK";
+            invertedInfo.textContent = `RGB(${255-r}, ${255-g}, ${255-b})`;
         } else {
-            previewText.textContent = "Invalid Color";
+            previewHex.textContent = "Invalid Color";
+            previewHex.style.color = "#333";
             contrastInfo.textContent = "--";
             invertedInfo.textContent = "--";
         }
@@ -239,8 +249,8 @@
 
     function resetPreview() {
         previewWall.style.backgroundColor = "#eee";
-        previewText.style.color = "#333";
-        previewText.textContent = "Preview";
+        previewHex.textContent = "Preview";
+        previewHex.style.color = "#333";
         contrastInfo.textContent = "--";
         invertedInfo.textContent = "--";
     }
@@ -248,8 +258,8 @@
     function clearInput() {
         colorInput.value = '';
         clearBtn.classList.remove('active');
-        colorInput.focus();
         resetPreview();
+        colorInput.focus();
     }
 
     function showModal() { document.getElementById('modal').style.display = 'flex'; }
