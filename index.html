@@ -79,6 +79,8 @@
             -webkit-text-fill-color: var(--main) !important;
             opacity: 1 !important;
         }
+        /* プレースホルダの色を濃い目に変更 */
+        .color-input::placeholder { color: #888; -webkit-text-fill-color: #888; }
 
         .clear-btn {
             position: absolute;
@@ -119,7 +121,6 @@
         .info-label { font-size: 0.65rem; color: #999; font-weight: 800; margin-bottom: 4px; display: block; z-index: 2; position: relative; }
         .info-value { font-size: 0.85rem; font-weight: 700; z-index: 2; position: relative; }
 
-        /* コピー完了フィードバック */
         .copy-toast {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -243,7 +244,6 @@
     }
 
     function updateColor(input) {
-        // #補完
         if (/^[0-9A-F]{3}$/i.test(input) || /^[0-9A-F]{6}$/i.test(input)) {
             input = '#' + input;
         }
@@ -263,12 +263,10 @@
             const brightness = getBrightness(r, g, b);
             const isDark = brightness < 128;
 
-            // Main Preview
             previewWall.style.backgroundColor = input;
             previewHex.textContent = input.toUpperCase();
             previewHex.style.color = isDark ? "#ffffff" : "#333333";
 
-            // Contrast Card (推奨テキスト色の背景にする)
             const textBg = isDark ? "#ffffff" : "#333333";
             const textCol = isDark ? "#333333" : "#ffffff";
             contrastCard.style.backgroundColor = textBg;
@@ -276,7 +274,6 @@
             contrastLabel.style.color = textCol;
             contrastValue.textContent = isDark ? "Use Light Text" : "Use Dark Text";
 
-            // Inverted Card
             const invR = 255 - r, invG = 255 - g, invB = 255 - b;
             const invHex = rgbToHex(invR, invG, invB);
             const invBrightness = getBrightness(invR, invG, invB);
